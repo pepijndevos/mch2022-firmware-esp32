@@ -60,7 +60,8 @@ typedef enum action {
     ACTION_BACK,
     ACTION_FILE_BROWSER,
     ACTION_FILE_BROWSER_INT,
-    ACTION_UNINSTALL
+    ACTION_UNINSTALL,
+    TEST_BUTTONS
 } menu_action_t;
 
 typedef struct _menu_args {
@@ -114,7 +115,7 @@ void appfs_store_app(pax_buf_t* pax_buffer, ILI9341* ili9341, char* path, char* 
 }
 
 void menu_launcher(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili9341, menu_action_t* menu_action, appfs_handle_t* appfs_fd) {
-    menu_t* menu = menu_alloc("Main menu");
+    menu_t* menu = menu_alloc("Tests");
     *appfs_fd = APPFS_INVALID_FD;
     *menu_action = ACTION_NONE;
     
@@ -130,45 +131,49 @@ void menu_launcher(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili
     }
     *appfs_fd = APPFS_INVALID_FD;
 
-    menu_args_t* install_args = malloc(sizeof(menu_args_t));
+    menu_args_t* test_buttons_args = malloc(sizeof(menu_args_t));
+    test_buttons_args->action = TEST_BUTTONS;
+    menu_insert_item(menu, "Test buttons", NULL, test_buttons_args, -1);
+
+    /*menu_args_t* install_args = malloc(sizeof(menu_args_t));
     install_args->action = ACTION_INSTALLER;
-    menu_insert_item(menu, "Hatchery", NULL, install_args, -1);
+    menu_insert_item(menu, "Hatchery", NULL, install_args, -1);*/
     
-    menu_args_t* settings_args = malloc(sizeof(menu_args_t));
+    /*menu_args_t* settings_args = malloc(sizeof(menu_args_t));
     settings_args->action = ACTION_SETTINGS;
-    menu_insert_item(menu, "WiFi settings", NULL, settings_args, -1);
+    menu_insert_item(menu, "WiFi settings", NULL, settings_args, -1);*/
     
-    menu_args_t* ota_args = malloc(sizeof(menu_args_t));
+    /*menu_args_t* ota_args = malloc(sizeof(menu_args_t));
     ota_args->action = ACTION_OTA;
-    menu_insert_item(menu, "Firmware update", NULL, ota_args, -1);
-    
-    menu_args_t* fpga_dl_args = malloc(sizeof(menu_args_t));
-    fpga_dl_args->action = ACTION_FPGA_DL;
-    menu_insert_item(menu, "FPGA download", NULL, fpga_dl_args, -1);
+    menu_insert_item(menu, "Firmware update", NULL, ota_args, -1);*/
 
     menu_args_t* fpga_args = malloc(sizeof(menu_args_t));
     fpga_args->action = ACTION_FPGA;
-    menu_insert_item(menu, "FPGA test", NULL, fpga_args, -1);
+    menu_insert_item(menu, "Test FPGA", NULL, fpga_args, -1);
     
-    menu_args_t* rp2040bl_args = malloc(sizeof(menu_args_t));
+    /*menu_args_t* rp2040bl_args = malloc(sizeof(menu_args_t));
     rp2040bl_args->action = ACTION_RP2040_BL;
-    menu_insert_item(menu, "RP2040 bootloader", NULL, rp2040bl_args, -1);
+    menu_insert_item(menu, "RP2040 bootloader", NULL, rp2040bl_args, -1);*/
     
-    menu_args_t* wifi_connect_args = malloc(sizeof(menu_args_t));
+    /*menu_args_t* wifi_connect_args = malloc(sizeof(menu_args_t));
     wifi_connect_args->action = ACTION_WIFI_CONNECT;
-    menu_insert_item(menu, "WiFi connect", NULL, wifi_connect_args, -1);
+    menu_insert_item(menu, "WiFi connect", NULL, wifi_connect_args, -1);*/
     
     menu_args_t* file_browser_args = malloc(sizeof(menu_args_t));
     file_browser_args->action = ACTION_FILE_BROWSER;
-    menu_insert_item(menu, "File browser (sd card)", NULL, file_browser_args, -1);
+    menu_insert_item(menu, "Test SD card", NULL, file_browser_args, -1);
     
-    menu_args_t* file_browser_int_args = malloc(sizeof(menu_args_t));
+    /*menu_args_t* file_browser_int_args = malloc(sizeof(menu_args_t));
     file_browser_int_args->action = ACTION_FILE_BROWSER_INT;
-    menu_insert_item(menu, "File browser (internal)", NULL, file_browser_int_args, -1);
+    menu_insert_item(menu, "File browser (internal)", NULL, file_browser_int_args, -1);*/
     
-    menu_args_t* uninstall_args = malloc(sizeof(menu_args_t));
+    /*menu_args_t* uninstall_args = malloc(sizeof(menu_args_t));
     uninstall_args->action = ACTION_UNINSTALL;
-    menu_insert_item(menu, "Uninstall app", NULL, uninstall_args, -1);
+    menu_insert_item(menu, "Uninstall app", NULL, uninstall_args, -1);*/
+
+    menu_args_t* fpga_dl_args = malloc(sizeof(menu_args_t));
+    fpga_dl_args->action = ACTION_FPGA_DL;
+    menu_insert_item(menu, "FPGA download mode", NULL, fpga_dl_args, -1);
 
     bool render = true;
     menu_args_t* menuArgs = NULL;
@@ -501,7 +506,7 @@ void find_parent_dir(char* path, char* parent) {
 void file_browser(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili9341, const char* initial_path) {
     char path[512] = {0};
     strncpy(path, initial_path, sizeof(path));
-    while (true) {    
+    while (true) {
         menu_t* menu = menu_alloc(path);
         DIR* dir = opendir(path);
         if (dir == NULL) {
@@ -575,7 +580,7 @@ void file_browser(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili9
                 graphics_task(pax_buffer, ili9341, menu, NULL);
                 render = false;
             }
-            
+
             if (menuArgs != NULL) {
                 if (menuArgs->type == 'd') {
                     strcpy(path, menuArgs->path);
@@ -587,17 +592,114 @@ void file_browser(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili9
                 menuArgs = NULL;
                 render = true;
             }
-            
+
             if (exit) {
                 break;
             }
         }
-        
+
         for (size_t index = 0; index < menu_get_length(menu); index++) {
             free(menu_get_callback_args(menu, index));
         }
-        
+
         menu_free(menu);
+    }
+}
+
+void test_buttons(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili9341) {
+    bool render = true;
+    bool quit = false;
+
+    bool btn_joy_down = false;
+    bool btn_joy_up = false;
+    bool btn_joy_left = false;
+    bool btn_joy_right = false;
+    bool btn_joy_press = false;
+    bool btn_home = false;
+    bool btn_menu = false;
+    bool btn_select = false;
+    bool btn_start = false;
+    bool btn_accept = false;
+    bool btn_back = false;
+
+    while (!quit) {
+        rp2040_input_message_t buttonMessage = {0};
+        if (xQueueReceive(buttonQueue, &buttonMessage, 16 / portTICK_PERIOD_MS) == pdTRUE) {
+            uint8_t pin = buttonMessage.input;
+            bool value = buttonMessage.state;
+            render = true;
+            switch(pin) {
+                case RP2040_INPUT_JOYSTICK_DOWN:
+                    btn_joy_down = value;
+                    break;
+                case RP2040_INPUT_JOYSTICK_UP:
+                    btn_joy_up = value;
+                    break;
+                case RP2040_INPUT_JOYSTICK_LEFT:
+                    btn_joy_left = value;
+                    break;
+                case RP2040_INPUT_JOYSTICK_RIGHT:
+                    btn_joy_right = value;
+                    break;
+                case RP2040_INPUT_JOYSTICK_PRESS:
+                    btn_joy_press = value;
+                    break;
+                case RP2040_INPUT_BUTTON_HOME:
+                    btn_home = value;
+                    break;
+                case RP2040_INPUT_BUTTON_MENU:
+                    btn_menu = value;
+                    break;
+                case RP2040_INPUT_BUTTON_SELECT:
+                    btn_select = value;
+                    break;
+                case RP2040_INPUT_BUTTON_START:
+                    btn_start = value;
+                    break;
+                case RP2040_INPUT_BUTTON_ACCEPT:
+                    btn_accept = value;
+                    break;
+                case RP2040_INPUT_BUTTON_BACK:
+                    btn_back = value;
+                default:
+                    break;
+            }
+        }
+
+        if (render) {
+            pax_noclip(pax_buffer);
+            pax_background(pax_buffer, 0x325aa8);
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*0, "Press HOME + START to exit");
+            char buffer[64];
+            snprintf(buffer, sizeof(buffer), "JOY DOWN   %s", btn_joy_down ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*1, buffer);
+            snprintf(buffer, sizeof(buffer), "JOY UP     %s", btn_joy_up ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*2, buffer);
+            snprintf(buffer, sizeof(buffer), "JOY LEFT   %s", btn_joy_left ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*3, buffer);
+            snprintf(buffer, sizeof(buffer), "JOY RIGHT  %s", btn_joy_right ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*4, buffer);
+            snprintf(buffer, sizeof(buffer), "JOY PRESS  %s", btn_joy_press ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*5, buffer);
+            snprintf(buffer, sizeof(buffer), "BTN HOME   %s", btn_home ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*6, buffer);
+            snprintf(buffer, sizeof(buffer), "BTN MENU   %s", btn_menu ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*7, buffer);
+            snprintf(buffer, sizeof(buffer), "BTN SELECT %s", btn_select ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*8, buffer);
+            snprintf(buffer, sizeof(buffer), "BTN START  %s", btn_start ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*9, buffer);
+            snprintf(buffer, sizeof(buffer), "BTN A      %s", btn_accept ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*10, buffer);
+            snprintf(buffer, sizeof(buffer), "BTN B      %s", btn_back ? "PRESSED" : "released");
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*11, buffer);
+            ili9341_write(ili9341, pax_buffer->buf);
+            render = false;
+        }
+
+        if (btn_home && btn_start) {
+            quit = true;
+        }
     }
 }
 
@@ -783,6 +885,8 @@ void app_main(void) {
             file_browser(rp2040->queue, pax_buffer, ili9341, "/internal");
         } else if (menu_action == ACTION_UNINSTALL) {
             uninstall_browser(rp2040->queue, pax_buffer, ili9341);
+        } else if (menu_action == TEST_BUTTONS) {
+            test_buttons(rp2040->queue, pax_buffer, ili9341);
         } else if (menu_action == ACTION_SETTINGS) {
             while (true) {
                 menu_wifi_settings(rp2040->queue, pax_buffer, ili9341, &menu_action);
