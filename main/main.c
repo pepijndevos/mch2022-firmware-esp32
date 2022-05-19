@@ -42,6 +42,8 @@
 
 #include "fpga_download.h"
 
+#include "audio.h"
+
 static const char *TAG = "main";
 
 typedef enum action {
@@ -61,7 +63,8 @@ typedef enum action {
     ACTION_FILE_BROWSER,
     ACTION_FILE_BROWSER_INT,
     ACTION_UNINSTALL,
-    TEST_BUTTONS
+    TEST_BUTTONS,
+    ACTION_AUDIO
 } menu_action_t;
 
 typedef struct _menu_args {
@@ -150,6 +153,10 @@ void menu_launcher(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili
     menu_args_t* fpga_args = malloc(sizeof(menu_args_t));
     fpga_args->action = ACTION_FPGA;
     menu_insert_item(menu, "Test FPGA", NULL, fpga_args, -1);
+
+    menu_args_t* audio_args = malloc(sizeof(menu_args_t));
+    audio_args->action = ACTION_AUDIO;
+    menu_insert_item(menu, "Test audio", NULL, audio_args, -1);
     
     /*menu_args_t* rp2040bl_args = malloc(sizeof(menu_args_t));
     rp2040bl_args->action = ACTION_RP2040_BL;
@@ -853,6 +860,8 @@ void app_main(void) {
     /* Start WiFi */
     wifi_init();
 
+    audio_init();
+
     /* Launcher menu */
     while (true) {
         menu_action_t menu_action;
@@ -865,6 +874,8 @@ void app_main(void) {
             fpga_test(ili9341, ice40, rp2040->queue);
         } else if (menu_action == ACTION_FPGA_DL) {
             fpga_download(ice40, pax_buffer, ili9341);
+        } else if (menu_action == ACTION_AUDIO) {
+            audio_test(rp2040->queue, pax_buffer, ili9341);
         } else if (menu_action == ACTION_RP2040_BL) {
             graphics_task(pax_buffer, ili9341, NULL, "RP2040 update...");
             rp2040_reboot_to_bootloader(rp2040);
