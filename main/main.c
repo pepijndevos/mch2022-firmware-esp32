@@ -42,9 +42,39 @@
 
 #include "fpga_download.h"
 
-#include "wallpaper.h"
-
 #include <pax_codecs.h>
+
+#include "audio.h"
+
+extern const uint8_t mch2022_logo_png_start[] asm("_binary_mch2022_logo_png_start");
+extern const uint8_t mch2022_logo_png_end[] asm("_binary_mch2022_logo_png_end");
+
+extern const uint8_t wallpaper_png_start[] asm("_binary_wallpaper_png_start");
+extern const uint8_t wallpaper_png_end[] asm("_binary_wallpaper_png_end");
+
+/*extern const uint8_t help32_png_start[] asm("_binary_help32_png_start");
+extern const uint8_t help32_png_end[] asm("_binary_help32_png_end");
+
+extern const uint8_t executablefile32_png_start[] asm("_binary_executablefile32_png_start");
+extern const uint8_t executablefile32_png_end[] asm("_binary_executablefile32_png_end");
+
+extern const uint8_t erasefile32_png_start[] asm("_binary_erasefile32_png_start");
+extern const uint8_t erasefile32_png_end[] asm("_binary_erasefile32_png_end");
+
+extern const uint8_t copy32_png_start[] asm("_binary_copy32_png_start");
+extern const uint8_t copy32_png_end[] asm("_binary_copy32_png_end");
+
+extern const uint8_t infrared32_png_start[] asm("_binary_infrared32_png_start");
+extern const uint8_t infrared32_png_end[] asm("_binary_infrared32_png_end");
+
+extern const uint8_t fpgafile32_png_start[] asm("_binary_fpgafile32_png_start");
+extern const uint8_t fpgafile32_png_end[] asm("_binary_fpgafile32_png_end");
+
+extern const uint8_t audio32_png_start[] asm("_binary_audio32_png_start");
+extern const uint8_t audio32_png_end[] asm("_binary_audio32_png_end");
+
+extern const uint8_t directory32_png_start[] asm("_binary_directory32_png_start");
+extern const uint8_t directory32_png_end[] asm("_binary_directory32_png_end");*/
 
 static const char *TAG = "main";
 
@@ -120,7 +150,7 @@ void appfs_store_app(pax_buf_t* pax_buffer, ILI9341* ili9341, char* path, char* 
 void menu_launcher(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili9341, menu_action_t* menu_action, appfs_handle_t* appfs_fd) {
     menu_t* menu = menu_alloc("Main menu");
     
-    pax_decode_png_buf(&menu->wallpaper, (void*) wallpaper, sizeof(wallpaper), PAX_BUF_16_565RGB, 0);
+    pax_decode_png_buf(&menu->wallpaper, (void*) wallpaper_png_start, wallpaper_png_end - wallpaper_png_start, PAX_BUF_16_565RGB, 0);
     menu->use_wallpaper = true;
     
     *appfs_fd = APPFS_INVALID_FD;
@@ -300,8 +330,14 @@ void menu_wifi_settings(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341
 
 void display_boot_screen(pax_buf_t* pax_buffer, ILI9341* ili9341) {
     pax_noclip(pax_buffer);
-    pax_background(pax_buffer, 0x325aa8);
-    pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 18, 0, 20*0, "Starting launcher...");
+    pax_background(pax_buffer, 0xFFFFFF);
+    pax_buf_t logo;
+    pax_decode_png_buf(&logo, (void*) mch2022_logo_png_start, mch2022_logo_png_end - mch2022_logo_png_start, PAX_BUF_16_565RGB, 0);
+    pax_draw_image(pax_buffer, &logo, (320 / 2) - (212 / 2), ((240 - 32 - 10) / 2) - (160 / 2));
+    pax_buf_destroy(&logo);
+    
+    pax_vec1_t size = pax_text_size(NULL, 18, "Starting...");
+    pax_draw_text(pax_buffer, 0xFF000000, NULL, 18, (320 / 2) - (size.x / 2), 240 - 32, "Starting...");
     ili9341_write(ili9341, pax_buffer->buf);
 }
 
@@ -610,32 +646,85 @@ void file_browser(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili9
     }
 }
 
-void test_grid_menu(pax_buf_t* pax_buffer, ILI9341* ili9341) {
+typedef struct _grid_menu_item {
+    pax_buf_t icon;
+    char* label;
+} grid_menu_item_t;
+
+/*void test_grid_menu(pax_buf_t* pax_buffer, ILI9341* ili9341) {
     const uint16_t width = 320;
     const uint16_t height = 240;
-    const uint16_t margin = 8;
-    const uint16_t header_height = 32;
-    const uint16_t columns = 3;
+    const uint16_t margin_x = 16;
+    const uint16_t margin_y = 8;
+    const uint16_t header_height = 20;
+    const uint16_t columns = 4;
     const uint16_t rows = 3;
     
-    const uint16_t button_width = (width - margin * (columns + 1)) / columns;
-    const uint16_t button_height = (height - margin * (rows + 1) - header_height) / rows;
+    grid_menu_item_t menu_items[] = {
+        {.label = "Apps"},
+        {.label = "Files\nInternal"},
+        {.label = "Files\nSD card"},
+        {.label = "Hatchery"},
+        
+        {.label = "FPGA\ntest"},
+        {.label = "FPGA\ndownload"},
+        {.label = "Settings"},
+        {.label = "Uninstall\napp"},
+        
+        {.label = "Firmware\nupdate"},
+        {.label = "RP2040\nbootloader"},
+        {.label = "Connect\nWiFi"},
+        {.label = "Button\ntest"}
+    };
+    
+    pax_decode_png_buf(&menu_items[0].icon, (void*) executablefile32_png_start, executablefile32_png_end - executablefile32_png_start, PAX_BUF_32_8888ARGB, 0);
+    pax_decode_png_buf(&menu_items[1].icon, (void*) directory32_png_start, directory32_png_end - directory32_png_start, PAX_BUF_32_8888ARGB, 0);
+    pax_decode_png_buf(&menu_items[2].icon, (void*) directory32_png_start, directory32_png_end - directory32_png_start, PAX_BUF_32_8888ARGB, 0);
+    pax_decode_png_buf(&menu_items[3].icon, (void*) copy32_png_start, copy32_png_end - copy32_png_start, PAX_BUF_32_8888ARGB, 0);
+    
+    pax_decode_png_buf(&menu_items[4].icon, (void*) fpgafile32_png_start, fpgafile32_png_end - fpgafile32_png_start, PAX_BUF_32_8888ARGB, 0);
+    pax_decode_png_buf(&menu_items[5].icon, (void*) fpgafile32_png_start, fpgafile32_png_end - fpgafile32_png_start, PAX_BUF_32_8888ARGB, 0);
+    pax_decode_png_buf(&menu_items[6].icon, (void*) help32_png_start, help32_png_end - help32_png_start, PAX_BUF_32_8888ARGB, 0);
+    pax_decode_png_buf(&menu_items[7].icon, (void*) erasefile32_png_start, erasefile32_png_end - erasefile32_png_start, PAX_BUF_32_8888ARGB, 0);
+    
+    pax_decode_png_buf(&menu_items[8].icon, (void*) fpgafile32_png_start, fpgafile32_png_end - fpgafile32_png_start, PAX_BUF_32_8888ARGB, 0);
+    pax_decode_png_buf(&menu_items[9].icon, (void*) fpgafile32_png_start, fpgafile32_png_end - fpgafile32_png_start, PAX_BUF_32_8888ARGB, 0);
+    pax_decode_png_buf(&menu_items[10].icon,(void*) fpgafile32_png_start, fpgafile32_png_end - fpgafile32_png_start, PAX_BUF_32_8888ARGB, 0);
+    pax_decode_png_buf(&menu_items[11].icon, (void*) infrared32_png_start, infrared32_png_end - infrared32_png_start, PAX_BUF_32_8888ARGB, 0);
+    
+    const uint16_t button_width = (width - margin_x * (columns + 1)) / columns;
+    const uint16_t button_height = (height - margin_y * (rows + 1) - header_height) / rows;
     printf("Button width: %u\n", button_width);
     printf("Button height: %u\n", button_height);
     
     pax_noclip(pax_buffer);
-    pax_background(pax_buffer, 0xFFFFFF);
-    pax_buf_t image;
-    pax_decode_png_buf(&image, (void*) wallpaper, sizeof(wallpaper), PAX_BUF_16_565RGB, 0);
-    pax_draw_image(pax_buffer, &image, 0, 0);
-    pax_buf_destroy(&image);
+    pax_background(pax_buffer, 0x017d79);
+    //pax_buf_t image;
+    //pax_decode_png_buf(&image, (void*) wallpaper_png_start, wallpaper_png_end - wallpaper_png_start, PAX_BUF_16_565RGB, 0);
+    //pax_draw_image(pax_buffer, &image, 0, 0);
+    //pax_buf_destroy(&image);
+    
+    pax_buf_t help32;
+    pax_decode_png_buf(&help32, (void*) help32_png_start, help32_png_end - help32_png_start, PAX_BUF_32_8888ARGB, 0);
+    
+    pax_simple_rect(pax_buffer, 0xffc0c0c0, 0, 0, width, header_height);
+    pax_simple_line(pax_buffer, 0xffffffff, 0, header_height - 1, width, header_height - 1);
+    pax_simple_line(pax_buffer, 0xffdfdfdf, 0, header_height, width, header_height);
+    pax_draw_text(pax_buffer, 0xff000000, NULL, header_height - 4, 2, 2, "MCH2022");
+    
+    uint16_t index = 0;
     
     for (uint16_t row = 0; row < rows; row++) {
         for (uint16_t column = 0; column < columns; column++) {
-            uint16_t x = margin + ((margin + button_width) * column);
-            uint16_t y = header_height + margin + ((margin + button_height) * row);
-            pax_simple_rect(pax_buffer, 0x440000FF, x, y, button_width, button_height);
-            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 12, x, y + button_height - 13, "test");
+            uint16_t x = margin_x + ((margin_x + button_width) * column);
+            uint16_t y = header_height + margin_y + ((margin_y + button_height) * row);
+            //pax_simple_rect(pax_buffer, 0xffc0c0c0, x, y, button_width, button_height);
+            //pax_outline_rect(pax_buffer, 0xffffffff, x+1, y+1, button_width-2, button_height-2);
+            //pax_outline_rect(pax_buffer, 0xffdfdfdf, x, y, button_width, button_height);
+            pax_vec1_t size = pax_text_size(NULL, 12, menu_items[index].label);
+            pax_draw_text(pax_buffer, 0xff000000, NULL, 12, x + (button_width / 2) - (size.x / 2), y + button_height - 13, menu_items[index].label);
+            pax_draw_image(pax_buffer, &menu_items[index].icon, x + (button_width / 2) - 16, y + 2);
+            index++;
         }
     }
     
@@ -644,7 +733,7 @@ void test_grid_menu(pax_buf_t* pax_buffer, ILI9341* ili9341) {
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-}
+}*/
 
 void app_main(void) {
     esp_err_t res;
@@ -797,6 +886,9 @@ void app_main(void) {
     wifi_init();
     
    //test_grid_menu(pax_buffer, ili9341);
+    
+    audio_init();
+    play_bootsound();
 
     /* Launcher menu */
     while (true) {
