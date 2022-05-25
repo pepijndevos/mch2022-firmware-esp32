@@ -3,6 +3,8 @@
 #include "pax_gfx.h"
 #include "menu.h"
 
+#include <pax_codecs.h>
+
 menu_t* menu_alloc(const char* aTitle) {
     if (aTitle == NULL) return NULL;
     menu_t* menu = malloc(sizeof(menu_t));
@@ -179,16 +181,22 @@ void menu_debug(menu_t* aMenu) {
 
 void menu_render(pax_buf_t *aBuffer, menu_t* aMenu, float aPosX, float aPosY, float aWidth, float aHeight) {
     pax_col_t fgColor = 0xFF000000;
-    pax_col_t bgColor = 0xFFFFFFFF;
-    pax_col_t borderColor = 0xFF000000;
+    pax_col_t bgColor = 0x55FFFFFF;
+    pax_col_t bgTextColor = 0xFFFFFFFF;
+    pax_col_t borderColor = 0x88000000;
     pax_col_t titleColor = 0xFFFFFFFF;
-    pax_col_t scrollbarBgColor = 0xFF555555;
-    pax_col_t scrollbarFgColor = 0xFFCCCCCC;
-    pax_col_t scrollbarSlColor = 0xFFFFFFFF;
+    pax_col_t scrollbarBgColor = 0x55555555;
+    pax_col_t scrollbarFgColor = 0x55CCCCCC;
+    pax_col_t scrollbarSlColor = 0x55FFFFFF;
     float  entry_height = 18 + 2;
     size_t maxItems = aHeight / entry_height;
     
     float posY = aPosY;
+    
+    if (aMenu->use_wallpaper) {
+        pax_noclip(aBuffer);
+        pax_draw_image(aBuffer, &aMenu->wallpaper, 0, 0);
+    }
     
     pax_clip(aBuffer, aPosX, aPosY, aWidth, aHeight);
     pax_simple_rect(aBuffer, bgColor, aPosX, aPosY, aWidth, aHeight);
@@ -219,7 +227,7 @@ void menu_render(pax_buf_t *aBuffer, menu_t* aMenu, float aPosX, float aPosY, fl
         if (index == aMenu->position) {
             pax_simple_rect(aBuffer, fgColor, aPosX + 1, posY, aWidth - 2, entry_height);
             pax_clip(aBuffer, aPosX + 1, posY + 1, aWidth - 4, entry_height - 2);
-            pax_draw_text(aBuffer, bgColor, NULL, entry_height - 2, aPosX + 1, posY + 1, item->label);
+            pax_draw_text(aBuffer, bgTextColor, NULL, entry_height - 2, aPosX + 1, posY + 1, item->label);
         } else {
             pax_simple_rect(aBuffer, bgColor, aPosX + 1, posY, aWidth - 2, entry_height);
             pax_clip(aBuffer, aPosX + 1, posY + 1, aWidth - 4, entry_height - 2);

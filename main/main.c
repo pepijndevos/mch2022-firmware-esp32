@@ -42,6 +42,10 @@
 
 #include "fpga_download.h"
 
+#include "wallpaper.h"
+
+#include <pax_codecs.h>
+
 static const char *TAG = "main";
 
 typedef enum action {
@@ -115,6 +119,10 @@ void appfs_store_app(pax_buf_t* pax_buffer, ILI9341* ili9341, char* path, char* 
 
 void menu_launcher(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili9341, menu_action_t* menu_action, appfs_handle_t* appfs_fd) {
     menu_t* menu = menu_alloc("Main menu");
+    
+    pax_decode_png_buf(&menu->wallpaper, (void*) wallpaper, sizeof(wallpaper), PAX_BUF_16_565RGB, 0);
+    menu->use_wallpaper = true;
+    
     *appfs_fd = APPFS_INVALID_FD;
     *menu_action = ACTION_NONE;
     
@@ -217,6 +225,7 @@ void menu_launcher(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili
         free(menu_get_callback_args(menu, index));
     }
     
+    pax_buf_destroy(&menu->wallpaper);
     menu_free(menu);
 }
 
@@ -601,6 +610,42 @@ void file_browser(xQueueHandle buttonQueue, pax_buf_t* pax_buffer, ILI9341* ili9
     }
 }
 
+void test_grid_menu(pax_buf_t* pax_buffer, ILI9341* ili9341) {
+    const uint16_t width = 320;
+    const uint16_t height = 240;
+    const uint16_t margin = 8;
+    const uint16_t header_height = 32;
+    const uint16_t columns = 3;
+    const uint16_t rows = 3;
+    
+    const uint16_t button_width = (width - margin * (columns + 1)) / columns;
+    const uint16_t button_height = (height - margin * (rows + 1) - header_height) / rows;
+    printf("Button width: %u\n", button_width);
+    printf("Button height: %u\n", button_height);
+    
+    pax_noclip(pax_buffer);
+    pax_background(pax_buffer, 0xFFFFFF);
+    pax_buf_t image;
+    pax_decode_png_buf(&image, (void*) wallpaper, sizeof(wallpaper), PAX_BUF_16_565RGB, 0);
+    pax_draw_image(pax_buffer, &image, 0, 0);
+    pax_buf_destroy(&image);
+    
+    for (uint16_t row = 0; row < rows; row++) {
+        for (uint16_t column = 0; column < columns; column++) {
+            uint16_t x = margin + ((margin + button_width) * column);
+            uint16_t y = header_height + margin + ((margin + button_height) * row);
+            pax_simple_rect(pax_buffer, 0x440000FF, x, y, button_width, button_height);
+            pax_draw_text(pax_buffer, 0xFFFFFFFF, NULL, 12, x, y + button_height - 13, "test");
+        }
+    }
+    
+    ili9341_write(ili9341, pax_buffer->buf);
+
+    while (true) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
 void app_main(void) {
     esp_err_t res;
     
@@ -750,6 +795,8 @@ void app_main(void) {
     
     /* Start WiFi */
     wifi_init();
+    
+   //test_grid_menu(pax_buffer, ili9341);
 
     /* Launcher menu */
     while (true) {

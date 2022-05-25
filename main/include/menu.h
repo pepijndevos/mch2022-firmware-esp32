@@ -27,6 +27,8 @@ typedef struct menu {
     menu_item_t* firstItem;
     size_t length;
     size_t position;
+    pax_buf_t wallpaper;
+    bool use_wallpaper;
 } menu_t;
 
 menu_t* menu_alloc(const char* aTitle);
