@@ -252,8 +252,18 @@ void fpga_download(xQueueHandle buttonQueue, ICE40* ice40, pax_buf_t* pax_buffer
                 ice40_disable(ice40);
                 ili9341_init(ili9341);
                 fpga_display_message(pax_buffer, ili9341, 0xa85a32, 0xFFFFFFFF,
-                    "FPGA download mode\nError: %d", res);
-                fpga_uart_mess("processing events failed with %d\n", res);
+                    "FPGA download mode\nBTN error: %d", res);
+                fpga_uart_mess("processing buttons events failed with %d\n", res);
+                goto error;
+            }
+
+            work_done |= fpga_req_process(ice40, &res);
+            if (res != ESP_OK) {
+                ice40_disable(ice40);
+                ili9341_init(ili9341);
+                fpga_display_message(pax_buffer, ili9341, 0xa85a32, 0xFFFFFFFF,
+                    "FPGA download mode\nREQ error: %d", res);
+                fpga_uart_mess("processing fpga requests failed with %d\n", res);
                 goto error;
             }
 
