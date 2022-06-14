@@ -268,14 +268,6 @@ void fpga_download(xQueueHandle buttonQueue, ICE40* ice40, pax_buf_t* pax_buffer
                 fpga_uart_mess("processing fpga requests failed with %d\n", res);
                 goto error;
             }
-
-            if (!work_done) {
-                // Minimal delay
-                if (esp_timer_get_time() > sleep_timeout)
-                    vTaskDelay(1);
-            } else {
-                sleep_timeout = esp_timer_get_time() + 50000; /* 50 ms */
-            }
         }
         ice40_disable(ice40);
         ili9341_init(ili9341);

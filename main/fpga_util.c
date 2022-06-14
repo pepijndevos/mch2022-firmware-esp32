@@ -91,7 +91,8 @@ fpga_irq_cleanup(ICE40 *ice40)
 bool
 fpga_irq_triggered(void)
 {
-    return xSemaphoreTake(g_irq_trig, 0) == pdTRUE;
+    return xSemaphoreTake(g_irq_trig, 10 / portTICK_PERIOD_MS) == pdTRUE;
+}
 }
 
 
