@@ -239,6 +239,8 @@ void fpga_download(xQueueHandle buttonQueue, ICE40* ice40, pax_buf_t* pax_buffer
         fpga_uart_mess("bitstream has uploaded\n");
 
         // Waiting for next download and sending key strokes to FPGA
+        int64_t sleep_timeout = 0;
+
         while (true) {
             esp_err_t res;
             bool work_done = false;
@@ -267,8 +269,13 @@ void fpga_download(xQueueHandle buttonQueue, ICE40* ice40, pax_buf_t* pax_buffer
                 goto error;
             }
 
-            if (!work_done)
-                vTaskDelay(10 / portTICK_PERIOD_MS);
+            if (!work_done) {
+                // Minimal delay
+                if (esp_timer_get_time() > sleep_timeout)
+                    vTaskDelay(1);
+            } else {
+                sleep_timeout = esp_timer_get_time() + 50000; /* 50 ms */
+            }
         }
         ice40_disable(ice40);
         ili9341_init(ili9341);
